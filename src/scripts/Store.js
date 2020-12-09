@@ -1,4 +1,5 @@
 import Observable from "./Observable";
+import { productTypeMap } from "../utils/dealUtils";
 
 class Store extends Observable {
   constructor() {
@@ -6,7 +7,7 @@ class Store extends Observable {
     this.state = {
       deals: [],
       productFilters: [],
-      providerFilter: null
+      providerFilter: null,
     };
   }
 
@@ -15,7 +16,44 @@ class Store extends Observable {
   }
 
   filter() {
-    return this.state.deals;
+    const allProductTypes = Array.from(productTypeMap.keys());
+    const unselectedProductTypes = allProductTypes.filter(
+      (productType) => !this.state.productFilters.includes(productType)
+    );
+
+    const filterByProduct = (deal) => {
+      if (this.state.productFilters.length === 0) return true;
+
+      /**
+       * A deal matches the product filter if:
+       * 1) It contains every selected product type
+       * 2) It doesn't contain any unselected product types
+       */
+
+      const hasAllSelectedProductTypes = this.state.productFilters.every(
+        (productType) => {
+          const checkType = productTypeMap.get(productType);
+          return checkType(deal);
+        }
+      );
+
+      const doesntHaveAnyUnselectedProductTypes = unselectedProductTypes.every(
+        (productType) => {
+          const checkType = productTypeMap.get(productType);
+          return !checkType(deal);
+        }
+      );
+
+      return hasAllSelectedProductTypes && doesntHaveAnyUnselectedProductTypes;
+    };
+
+    const filterByProvider = (deal) => {
+      if (this.state.providerFilter === null) return true;
+
+      return deal.provider.id === Number(this.state.providerFilter);
+    };
+
+    return this.state.deals.filter(filterByProduct).filter(filterByProvider);
   }
 
   setDeals(data) {
